@@ -108,7 +108,7 @@
 {% endblock %}
 
 {% block content %}
-    <form action="{{ url_for('tasks.index') }}" method="post" autocomplete="off">
+    <form action="{{ url_for('index') }}" method="post" autocomplete="off">
         <input type="text" name="content" placeholder="Add a new task..." required>
         <div class="form-controls">
             <div class="priority-options">
@@ -131,7 +131,7 @@
                     <div class="task-meta">Added: {{ todo.created_at.strftime('%b %d, %H:%M') }}</div>
                 </div>
                 {# Only show the 'X' button if the task is not yet completed #}
-                <a href="#" onclick="showConfirmModal(event, '{{ url_for('tasks.complete', todo_id=todo.id) }}')">X</a>
+                <a href="#" onclick="showConfirmModal(event, '{{ url_for('complete', todo_id=todo.id) }}')">X</a>
             </li>
         {% else %}
             <li class="placeholder-text">No active high priority tasks.</li>
@@ -147,7 +147,7 @@
                     <div class="task-meta">Added: {{ todo.created_at.strftime('%b %d, %H:%M') }}</div>
                 </div>
                 {# Only show the 'X' button if the task is not yet completed #}
-                <a href="#" onclick="showConfirmModal(event, '{{ url_for('tasks.complete', todo_id=todo.id) }}')">X</a>
+                <a href="#" onclick="showConfirmModal(event, '{{ url_for('complete', todo_id=todo.id) }}')">X</a>
             </li>
         {% else %}
             <li class="placeholder-text">No active normal priority tasks.</li>
