@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <style>
+        form { display: flex; flex-direction: column; gap: 0.75em; margin-bottom: 1.5em; }
+        .form-controls { display: flex; justify-content: space-between; align-items: center; gap: 0.75em; }
+        input[type="text"] { width: 100%; box-sizing: border-box; padding: 0.75em; border: 2px solid #444; border-radius: 10px; font-size: inherit; background-color: #212121; color: #e0e0e0; transition: border-color 0.2s, box-shadow 0.2s; }
+        input[type="text"]:focus { border-color: #4dabf7; box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.25); outline: none; }
+        button, .priority-label { padding: 0.75em 1.5em; border: 2px solid #444; background-color: transparent; color: #aaa; border-radius: 10px; cursor: pointer; font-size: inherit; transition: all 0.2s; font-weight: lighter; text-align: center; }
+        button:hover, .priority-label:hover { background-color: #333; }
+        button[type="submit"] { background-color: #00796b; border-color: #00796b; color: white; flex-grow: 1; }
+        button[type="submit"]:hover { background-color: #009688; border-color: #009688; }
+
+        /* Priority Radio Buttons */
+        .priority-options { display: flex; }
+        .priority-options input[type="radio"] { display: none; } /* Hide the actual radio button */
+        .priority-options .priority-label { border-radius: 0; border-left-width: 0; } /* Reset radius for middle elements if any */
+        .priority-options .priority-label:first-of-type { border-radius: 10px 0 0 10px; border-left-width: 2px; }
+        .priority-options .priority-label:last-of-type { border-radius: 0 10px 10px 0; }
+        /* Style for the selected priority */
+        .priority-options input[type="radio"]:checked + .priority-label {
+            background-color: #444;
+            color: #fff;
+            border-color: #555;
+        }
+
+        h2 { font-size: 1.1em; color: #888; border-bottom: 1px solid #444; padding-bottom: 0.3em; margin-top: 2em; font-weight: lighter; }
+        ul { list-style-type: none; padding: 0; margin-top: 1em; }
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5em;
+            padding: 0.5em 0.75em;
+            background-color: #212121;
+            border-radius: 10px;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .priority-high {
+            /* Dark red background for high priority */
+            background-color: #382424;
+            animation: pulse-high-priority 2s infinite ease-in-out;
+        }
+        @keyframes pulse-high-priority {
+            0%   { background-color: #382424; }
+            50%  { background-color: #4d2d2d; }
+            100% { background-color: #382424; }
+        }
+        .priority-normal {
+            /* Dark orange background for normal priority */
+            background-color: #392f23;
+        }
+        .task-content {
+            flex-grow: 1;
+        }
+        .task-meta {
+            font-size: 0.75em; color: #777; margin-top: 0.3em;
+        }
+        li a { color: #e57373; text-decoration: none; margin-left: 1em; }
+        .completed {
+            text-decoration: line-through;
+            color: #757575;
+        }
+        .placeholder-text {
+            color: #666;
+            background-color: transparent;
+            justify-content: center;
+            font-style: italic;
+        }
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #2c2c2c;
+            padding: 2em;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-buttons {
+            margin-top: 1em;
+            display: flex;
+            gap: 1em;
+            justify-content: center;
+        }
+        .modal-buttons button {
+            min-width: 100px;
+            border-color: #555;
+            font-weight: normal; /* Reset font-weight for modal buttons */
+        }
+        #confirmButton {
+            background-color: #c62828; /* A stronger red */
+            border-color: #c62828;
+            color: #fff; /* White text for high contrast */
+            font-weight: bold;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <form action="{{ url_for('tasks.index') }}" method="post" autocomplete="off">
+        <input type="text" name="content" placeholder="Add a new task..." required>
+        <div class="form-controls">
+            <div class="priority-options">
+                <input type="radio" id="priorityNormal" name="priority" value="Normal" checked>
+                <label for="priorityNormal" class="priority-label">Normal</label>
+
+                <input type="radio" id="priorityHigh" name="priority" value="High">
+                <label for="priorityHigh" class="priority-label">High</label>
+            </div>
+            <button type="submit">Add Task</button>
+        </div>
+    </form>
+
+    <h2>🔥 High Priority</h2>
+    <ul>
+        {% for todo in todos if todo.priority == 'High' and not todo.completed %}
+            <li class="priority-high">
+                <div class="task-content">
+                    {{ todo.content }}
+                    <div class="task-meta">Added: {{ todo.created_at.strftime('%b %d, %H:%M') }}</div>
+                </div>
+                {# Only show the 'X' button if the task is not yet completed #}
+                <a href="#" onclick="showConfirmModal(event, '{{ url_for('tasks.complete', todo_id=todo.id) }}')">X</a>
+            </li>
+        {% else %}
+            <li class="placeholder-text">No active high priority tasks.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>🎯 Normal Priority</h2>
+    <ul>
+        {% for todo in todos if todo.priority == 'Normal' and not todo.completed %}
+            <li class="priority-normal">
+                <div class="task-content">
+                    {{ todo.content }}
+                    <div class="task-meta">Added: {{ todo.created_at.strftime('%b %d, %H:%M') }}</div>
+                </div>
+                {# Only show the 'X' button if the task is not yet completed #}
+                <a href="#" onclick="showConfirmModal(event, '{{ url_for('tasks.complete', todo_id=todo.id) }}')">X</a>
+            </li>
+        {% else %}
+            <li class="placeholder-text">No active normal priority tasks.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>✓ Completed</h2>
+    <ul>
+        {# Create a new list containing only the completed tasks #}
+        {% set completed_tasks = todos|selectattr('completed')|list %}
+        {# Loop over the last 10 items of the new list #}
+        {% for todo in completed_tasks[-10:]|reverse %}
+            <li class="completed">
+                <div class="task-content">
+                    {{ todo.content }}
+                    <div class="task-meta">Completed: {{ todo.created_at.strftime('%b %d, %H:%M') }}</div>
+                </div>
+            </li>
+        {% else %}
+            <li class="placeholder-text">No completed tasks yet.</li>
+        {% endfor %}
+    </ul>
+    {% if completed_tasks|length > 10 %}<div>
+        <p style="text-align: center; color: #666; font-size: 0.9em;">Showing the 10 most recent completed tasks.</p>
+    </div>{% endif %}
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="modal-overlay">
+        <div class="modal-content">
+            <p>Mark this task as complete?</p>
+            <div class="modal-buttons">
+                <button id="cancelButton">Cancel</button>
+                <button id="confirmButton">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('confirmationModal');
+        const cancelButton = document.getElementById('cancelButton');
+        const confirmButton = document.getElementById('confirmButton');
+        let confirmUrl = null;
+
+        function showConfirmModal(event, url) {
+            event.preventDefault(); // This is the key to stopping the page jump
+            confirmUrl = url;
+            modal.style.display = 'flex';
+        }
+
+        function hideModal() {
+            modal.style.display = 'none';
+        }
+
+        cancelButton.onclick = hideModal;
+
+        // When the confirm button is clicked, redirect to the URL to complete the task.
+        // This will trigger a page reload.
+        confirmButton.onclick = () => { window.location.href = confirmUrl; };
+    </script>
+{% endblock %}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Task List{% endblock %}</title>
+    <style>
+        body { max-width: 600px; margin: 2em auto; padding: 0 1em; font-family: sans-serif; background-color: #121212; color: #e0e0e0; font-size: 1.1em; }
+        a { color: #4DB6AC; text-decoration: none; }
+        a:hover { text-decoration: underline; color: #80CBC4; }
+        header { border-bottom: 1px solid #444; padding-bottom: 0.5em; margin-bottom: 1.5em; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; }
+        .header-top h1 { text-align: center; font-weight: 300; color: #e0e0e0; margin: 0; flex-grow: 1; }
+        header .logout-link { font-size: 0.9em; }
+        nav { display: flex; justify-content: center; gap: 1.5em; margin-top: 1em; }
+        nav a { color: #aaa; padding: 0.5em 0; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        nav a:hover { color: #fff; }
+        nav a.active { color: #4DB6AC; border-bottom-color: #4DB6AC; }
+        .flash-message { padding: 1em; margin-bottom: 1em; border-radius: 10px; background-color: #c62828; color: white; text-align: center; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="header-top">
+            <h1>My App</h1>
+            {% if session.authenticated %}
+                <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+            {% endif %}
+        </div>
+        {% if session.authenticated %}
+            <nav>
+                <a href="{{ url_for('tasks.index') }}" class="{{ 'active' if request.blueprint == 'tasks' else '' }}">Tasks</a>
+                <a href="{{ url_for('workouts.index') }}" class="{{ 'active' if request.blueprint == 'workouts' else '' }}">Workouts</a>
+            </nav>
+        {% endif %}
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}<div class="flash-message">{{ messages[0] }}</div>{% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</body>
+</html>
+</html>
