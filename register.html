@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block head %}
+<style>
+    .auth-form { display: flex; flex-direction: column; gap: 1em; max-width: 300px; margin: 4em auto; }
+    .auth-form input { width: 100%; box-sizing: border-box; padding: 0.75em; border: 2px solid #ccc; border-radius: 10px; font-size: 1.1em; background-color: #fff; color: #333; }
+    .auth-form button { padding: 0.75em 2em; border: none; background-color: #00796b; color: white; border-radius: 10px; cursor: pointer; font-size: inherit; font-weight: lighter; }
+    .auth-form button:hover { background-color: #009688; }
+    h2 { text-align: center; font-weight: lighter; color: #888; }
+    .form-footer { text-align: center; margin-top: 1em; font-size: 0.9em; }
+</style>
+{% endblock %}
+
+{% block content %}
+    <form class="auth-form" method="post" autocomplete="off">
+        <h2>Create Your Account</h2>
+        <input type="email" name="email" placeholder="Email" required autofocus>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Register</button>
+        <div class="form-footer">Already have an account? <a href="{{ url_for('login') }}">Login here</a>.</div>
+    </form>
+{% endblock %}

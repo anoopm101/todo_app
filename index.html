@@ -1,30 +1,36 @@
 {% extends "base.html" %}
 
+{% block title %}My Notebook{% endblock %}
+
 {% block head %}
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <style>
         form { display: flex; flex-direction: column; gap: 0.75em; margin-bottom: 1.5em; }
         .form-controls { display: flex; justify-content: space-between; align-items: center; gap: 0.75em; }
-        input[type="text"] { width: 100%; box-sizing: border-box; padding: 0.75em; border: 2px solid #444; border-radius: 10px; font-size: inherit; background-color: #212121; color: #e0e0e0; transition: border-color 0.2s, box-shadow 0.2s; }
+        input[type="text"], select { width: 100%; box-sizing: border-box; padding: 0.75em; border: 2px solid #ccc; border-radius: 10px; font-size: inherit; background-color: #fff; color: #333; transition: border-color 0.2s, box-shadow 0.2s; }
         input[type="text"]:focus { border-color: #4dabf7; box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.25); outline: none; }
-        button, .priority-label { padding: 0.75em 1.5em; border: 2px solid #444; background-color: transparent; color: #aaa; border-radius: 10px; cursor: pointer; font-size: inherit; transition: all 0.2s; font-weight: lighter; text-align: center; }
-        button:hover, .priority-label:hover { background-color: #333; }
+        select { color: #777; } /* Lighter color for placeholder */
+        select:focus { border-color: #4dabf7; box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.25); outline: none; }
+        button { padding: 0.75em 1.5em; border: 2px solid #ccc; background-color: transparent; color: #555; border-radius: 10px; cursor: pointer; font-size: inherit; transition: all 0.2s; font-weight: lighter; text-align: center; }
         button[type="submit"] { background-color: #00796b; border-color: #00796b; color: white; flex-grow: 1; }
-        button[type="submit"]:hover { background-color: #009688; border-color: #009688; }
 
-        /* Priority Radio Buttons */
-        .priority-options { display: flex; }
-        .priority-options input[type="radio"] { display: none; } /* Hide the actual radio button */
-        .priority-options .priority-label { border-radius: 0; border-left-width: 0; } /* Reset radius for middle elements if any */
-        .priority-options .priority-label:first-of-type { border-radius: 10px 0 0 10px; border-left-width: 2px; }
-        .priority-options .priority-label:last-of-type { border-radius: 0 10px 10px 0; }
-        /* Style for the selected priority */
-        .priority-options input[type="radio"]:checked + .priority-label {
-            background-color: #444;
-            color: #fff;
-            border-color: #555;
+        /* Reminder Radio Buttons */
+        .reminder-options { display: flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 0.5em; }
+        .reminder-options input[type="radio"] { display: none; } /* Hide the actual radio button */
+        .reminder-options label {
+            padding: 0.5em 1em;
+            border: 2px solid #ccc;
+            background-color: transparent;
+            color: #555;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+            text-align: center;
         }
+        .reminder-options input[type="radio"]:checked + label { background-color: #e0e0e0; color: #333; border-color: #ccc; }
 
-        h2 { font-size: 1.1em; color: #888; border-bottom: 1px solid #444; padding-bottom: 0.3em; margin-top: 2em; font-weight: lighter; }
+        h2 { font-size: 1.1em; color: #888; border-bottom: 1px solid #ddd; padding-bottom: 0.3em; margin-top: 2em; font-weight: lighter; }
         ul { list-style-type: none; padding: 0; margin-top: 1em; }
         li {
             display: flex;
@@ -32,38 +38,28 @@
             align-items: center;
             margin-bottom: 0.5em;
             padding: 0.5em 0.75em;
-            background-color: #212121;
+            background-color: #fff;
             border-radius: 10px;
             transition: background-color 0.2s ease-in-out;
-        }
-        .priority-high {
-            /* Dark red background for high priority */
-            background-color: #382424;
-            animation: pulse-high-priority 2s infinite ease-in-out;
-        }
-        @keyframes pulse-high-priority {
-            0%   { background-color: #382424; }
-            50%  { background-color: #4d2d2d; }
-            100% { background-color: #382424; }
-        }
-        .priority-normal {
-            /* Dark orange background for normal priority */
-            background-color: #392f23;
         }
         .task-content {
             flex-grow: 1;
         }
         .task-meta {
-            font-size: 0.75em; color: #777; margin-top: 0.3em;
+            font-size: 0.75em; color: #888; margin-top: 0.3em; display: flex; gap: 1em;
+        }
+        .reminder-due {
+            /* A subtle striped pattern to indicate a due reminder */
+            background-image: repeating-linear-gradient(-45deg, rgba(255, 235, 59, 0.4), rgba(255, 235, 59, 0.4) 10px, transparent 10px, transparent 20px);
         }
         li a { color: #e57373; text-decoration: none; margin-left: 1em; }
         .completed {
             text-decoration: line-through;
-            color: #757575;
+            color: #aaa;
         }
         .placeholder-text {
-            color: #666;
-            background-color: transparent;
+            color: #999;
+            background-color: #f9f9f9;
             justify-content: center;
             font-style: italic;
         }
@@ -81,7 +77,7 @@
             z-index: 1000;
         }
         .modal-content {
-            background: #2c2c2c;
+            background: #fff;
             padding: 2em;
             border-radius: 16px;
             text-align: center;
@@ -95,7 +91,7 @@
         }
         .modal-buttons button {
             min-width: 100px;
-            border-color: #555;
+            border-color: #ccc;
             font-weight: normal; /* Reset font-weight for modal buttons */
         }
         #confirmButton {
@@ -110,69 +106,43 @@
 {% block content %}
     <form action="{{ url_for('index') }}" method="post" autocomplete="off">
         <input type="text" name="content" placeholder="Add a new task..." required>
+        <div class="reminder-options">
+            <input type="radio" id="reminderNone" name="reminder_due" value="" checked><label for="reminderNone">No Reminder</label>
+            <input type="radio" id="reminderToday" name="reminder_due" value="today"><label for="reminderToday">Today</label>
+            <input type="radio" id="reminderTomorrow" name="reminder_due" value="tomorrow"><label for="reminderTomorrow">Tomorrow</label>
+            <input type="radio" id="reminderWeek" name="reminder_due" value="week"><label for="reminderWeek">In A Week</label>
+            <input type="radio" id="reminderMonth" name="reminder_due" value="month"><label for="reminderMonth">In A Month</label>
+        </div>
         <div class="form-controls">
-            <div class="priority-options">
-                <input type="radio" id="priorityNormal" name="priority" value="Normal" checked>
-                <label for="priorityNormal" class="priority-label">Normal</label>
-
-                <input type="radio" id="priorityHigh" name="priority" value="High">
-                <label for="priorityHigh" class="priority-label">High</label>
-            </div>
             <button type="submit">Add Task</button>
         </div>
     </form>
 
-    <h2>🔥 High Priority</h2>
     <ul>
-        {% for todo in todos if todo.priority == 'High' and not todo.completed %}
-            <li class="priority-high">
-                <div class="task-content">
-                    {{ todo.content }}
-                    <div class="task-meta">Added: {{ todo.created_at.strftime('%b %d, %H:%M') }}</div>
-                </div>
-                {# Only show the 'X' button if the task is not yet completed #}
-                <a href="#" onclick="showConfirmModal(event, '{{ url_for('complete', todo_id=todo.id) }}')">X</a>
+        {% for todo in todos %}
+            <li class="{% if todo.completed %}completed{% endif %} {% if not todo.completed and todo.reminder_at and todo.reminder_at < now %}reminder-due{% endif %}">
+                {% if todo.completed %}
+                    <div class="task-content">
+                        {{ todo.content }}
+                        <div class="task-meta">Completed: {{ todo.created_at.strftime('%b %d, %H:%M') }}</div>
+                    </div>
+                {% else %}
+                    <div class="task-content">
+                        {{ todo.content }}
+                        <div class="task-meta">
+                            <span>Added: {{ todo.created_at.strftime('%b %d, %H:%M') }}</span>
+                            {% if todo.reminder_at %}
+                                <span>Reminder: {{ todo.reminder_at.strftime('%b %d, %H:%M') }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <a href="#" onclick="showConfirmModal(event, '{{ url_for('complete', todo_id=todo.id) }}')">X</a>
+                {% endif %}
             </li>
         {% else %}
-            <li class="placeholder-text">No active high priority tasks.</li>
+            <li class="placeholder-text">No tasks yet. Add one above!</li>
         {% endfor %}
     </ul>
-
-    <h2>🎯 Normal Priority</h2>
-    <ul>
-        {% for todo in todos if todo.priority == 'Normal' and not todo.completed %}
-            <li class="priority-normal">
-                <div class="task-content">
-                    {{ todo.content }}
-                    <div class="task-meta">Added: {{ todo.created_at.strftime('%b %d, %H:%M') }}</div>
-                </div>
-                {# Only show the 'X' button if the task is not yet completed #}
-                <a href="#" onclick="showConfirmModal(event, '{{ url_for('complete', todo_id=todo.id) }}')">X</a>
-            </li>
-        {% else %}
-            <li class="placeholder-text">No active normal priority tasks.</li>
-        {% endfor %}
-    </ul>
-
-    <h2>✓ Completed</h2>
-    <ul>
-        {# Create a new list containing only the completed tasks #}
-        {% set completed_tasks = todos|selectattr('completed')|list %}
-        {# Loop over the last 10 items of the new list #}
-        {% for todo in completed_tasks[-10:]|reverse %}
-            <li class="completed">
-                <div class="task-content">
-                    {{ todo.content }}
-                    <div class="task-meta">Completed: {{ todo.created_at.strftime('%b %d, %H:%M') }}</div>
-                </div>
-            </li>
-        {% else %}
-            <li class="placeholder-text">No completed tasks yet.</li>
-        {% endfor %}
-    </ul>
-    {% if completed_tasks|length > 10 %}<div>
-        <p style="text-align: center; color: #666; font-size: 0.9em;">Showing the 10 most recent completed tasks.</p>
-    </div>{% endif %}
 
     <!-- Confirmation Modal -->
     <div id="confirmationModal" class="modal-overlay">

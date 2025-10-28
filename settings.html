@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block head %}
+<style>
+    .settings-container { max-width: 500px; margin: 2em auto; }
+    .settings-container h2 { font-weight: lighter; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 0.5em; }
+    .settings-section { margin-bottom: 2em; }
+    #registerButton {
+        padding: 0.75em 1.5em;
+        border: none;
+        background-color: #007bff;
+        color: white;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 1em;
+    }
+    #registerButton:hover { background-color: #0056b3; }
+    #status { margin-top: 1em; font-weight: bold; }
+    .credential-list { list-style-type: none; padding: 0; }
+    .credential-list li { background-color: #fff; padding: 0.75em; border-radius: 8px; margin-bottom: 0.5em; font-size: 0.9em; color: #555; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="settings-section">
+        <h2>Biometric Login</h2>
+        <p>Register a device to log in with Face ID, a fingerprint, or other biometrics.</p>
+        <button id="registerButton">Register This Device</button>
+        <div id="status"></div>
+    </div>
+
+    <div class="settings-section">
+        <h3>Registered Devices</h3>
+        {% if credentials %}
+            <ul class="credential-list">
+                {% for cred in credentials %}
+                    <li>Device registered (ID: ...{{ cred.credential_id.hex()[-12:] }})</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No devices registered yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Helper function to convert ArrayBuffer to Base64URL string
+    function bufferToBase64URL(buffer) {
+        return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+    }
+
+    // Helper function to convert Base64URL string to ArrayBuffer
+    function base64URLToBuffer(base64url) {
+        const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer; // Return ArrayBuffer, not Uint8Array
+    }
+
+    document.getElementById('registerButton').onclick = async () => {
+        const statusEl = document.getElementById('status');
+        try {
+            statusEl.textContent = 'Starting registration...';
+            const options = await fetch('/webauthn/register/begin', { method: 'POST' }).then(r => r.json());
+
+            // The public key credential object contains ArrayBuffers that need to be
+            // DECODED from base64url to ArrayBuffers for the browser API.
+            options.challenge = base64URLToBuffer(options.challenge);
+            options.user.id = base64URLToBuffer(options.user.id);
+            if (options.excludeCredentials) {
+                options.excludeCredentials.forEach(cred => {
+                    cred.id = base64URLToBuffer(cred.id);
+                });
+            }
+
+            // Force the use of a platform authenticator (like Face ID, Touch ID, Windows Hello)
+            options.authenticatorSelection = {
+                authenticatorAttachment: "platform",
+                userVerification: "required"
+            };
+
+            // This is the magic browser API call that triggers Face ID / Touch ID
+            const credential = await navigator.credentials.create({ publicKey: options });
+            
+            const response = await fetch('/webauthn/register/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // Manually create a JSON-serializable object
+                body: JSON.stringify({
+                    id: credential.id, // This key is correct
+                    raw_id: bufferToBase64URL(credential.rawId), // Changed from rawId
+                    type: credential.type,
+                    response: {
+                        client_data_json: bufferToBase64URL(credential.response.clientDataJSON), // Changed from clientDataJSON
+                        attestation_object: bufferToBase64URL(credential.response.attestationObject), // Changed from attestationObject
+                    },
+                }),
+            }).then(r => r.json());
+
+            statusEl.textContent = response.message;
+            statusEl.style.color = response.success ? 'green' : 'red';
+            if (response.success) { window.location.reload(); } // Reload to show the new device
+        } catch (error) {
+            statusEl.textContent = 'Registration failed: ' + error.message;
+            statusEl.style.color = 'red';
+        }
+    };
+</script>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block head %}
+<style>
+    /* New styles for biometric login */
+    .biometric-login { text-align: center; }
+    #biometricLoginButton {
+        padding: 0.75em 1.5em;
+        border: 1px solid #007bff;
+        background-color: transparent;
+        color: #007bff;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 1em;
+    }
+    #biometricStatus { margin-top: 1em; font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="biometric-login">
+        <button id="biometricLoginButton">Login with Biometrics</button>
+        <div id="biometricStatus"></div>
+    </div>
+
+    <div class="or-divider">OR</div>
+
+    <form class="auth-form" method="post" autocomplete="off">
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+        <div class="form-footer">Don't have an account? <a href="{{ url_for('register') }}">Register here</a>.</div>
+    </form>
+</div>
+<script>
+    // Helper function to convert ArrayBuffer to Base64URL string
+    function bufferToBase64URL(buffer) {
+        return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+    }
+
+    // Helper function to convert Base64URL string to ArrayBuffer
+    function base64URLToBuffer(base64url) {
+        const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+
+    const triggerBiometricLogin = async () => {
+        const statusEl = document.getElementById('biometricStatus');
+        try {
+            statusEl.textContent = 'Waiting for biometric confirmation...';
+            const options = await fetch('/webauthn/login/begin', { method: 'POST' }).then(r => r.json());
+
+            // Gracefully handle the case where no biometric credentials exist in the system yet.
+            if (options.error) {
+                statusEl.textContent = ''; // Clear the status message
+                // Optionally hide the biometric login section if it's not available
+                document.getElementById('biometricLoginButton').style.display = 'none';
+                document.querySelector('.or-divider').style.display = 'none';
+                return;
+            }
+
+            // Decode challenge and credential IDs from base64url to ArrayBuffer
+            options.challenge = base64URLToBuffer(options.challenge);
+            if (options.allowCredentials) {
+                options.allowCredentials.forEach(cred => {
+                    cred.id = base64URLToBuffer(cred.id);
+                });
+            }
+
+            const credential = await navigator.credentials.get({ publicKey: options });
+
+            if (credential) {
+                const response = await fetch('/webauthn/login/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: credential.id,
+                        raw_id: bufferToBase64URL(credential.rawId),
+                        type: credential.type,
+                        response: {
+                            client_data_json: bufferToBase64URL(credential.response.clientDataJSON),
+                            authenticator_data: bufferToBase64URL(credential.response.authenticatorData),
+                            signature: bufferToBase64URL(credential.response.signature),
+                            user_handle: credential.response.userHandle ? bufferToBase64URL(credential.response.userHandle) : null,
+                        },
+                    }),
+                }).then(r => r.json());
+
+                if (response.success) {
+                    window.location.href = response.redirect_url;
+                } else {
+                    statusEl.textContent = response.message;
+                    statusEl.style.color = 'red';
+                }
+            }
+        } catch (error) {
+            // Clear status if user cancels the prompt (e.g., "The operation was aborted.")
+            statusEl.textContent = '';
+            statusEl.style.color = 'red';
+        }
+    };
+
+    document.getElementById('biometricLoginButton').onclick = triggerBiometricLogin;
+</script>
+{% endblock %}

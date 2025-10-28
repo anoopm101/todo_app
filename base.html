@@ -3,24 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Task List{% endblock %}</title>
+    <title>{% block title %}My Notebook{% endblock %}</title>
     <style>
-        body { max-width: 600px; margin: 2em auto; padding: 0 1em; font-family: sans-serif; background-color: #121212; color: #e0e0e0; font-size: 1.1em; }
-        a { color: #4DB6AC; text-decoration: none; }
-        a:hover { text-decoration: underline; color: #80CBC4; }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 0.5em; margin-bottom: 1.5em; }
-        header h1 { text-align: center; font-weight: 300; color: #e0e0e0; margin: 0; flex-grow: 1; }
-        header .logout-link { font-size: 0.9em; }
+        body { max-width: 600px; margin: 2em auto; padding: 0 1em; font-family: sans-serif; background-color: #f4f4f9; color: #333; font-size: 1.1em; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; color: #0056b3; }
+        header {
+            display: flex;
+            flex-direction: column; /* Stack items vertically */
+            align-items: center; /* Center items horizontally */
+            gap: 0.75em; /* Space between items */
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 1em;
+            margin-bottom: 1.5em;
+        }
+        header h1 { font-weight: 300; color: #333; margin: 0; }
+        .header-nav { display: flex; gap: 0.75em; }
+        .header-button {
+            display: inline-block;
+            padding: 0.5em 1em;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 0.9em;
+            background-color: #fff;
+            transition: background-color 0.2s;
+        }
+        .header-button:hover { background-color: #f0f0f0; text-decoration: none; }
         .flash-message { padding: 1em; margin-bottom: 1em; border-radius: 10px; background-color: #c62828; color: white; text-align: center; }
+
+        /* Shared styles for Login and Register pages */
+        .auth-container { max-width: 300px; margin: 2em auto; } /* Reduced top margin */
+        .auth-form { display: flex; flex-direction: column; gap: 1em; }
+        .auth-form input { width: 100%; box-sizing: border-box; padding: 0.75em; border: 2px solid #ccc; border-radius: 10px; font-size: 1.1em; background-color: #fff; color: #333; }
+        .auth-form button { padding: 0.75em 2em; border: none; background-color: #00796b; color: white; border-radius: 10px; cursor: pointer; font-size: inherit; font-weight: lighter; }
+        .auth-form button:hover { background-color: #009688; }
+        .form-footer { text-align: center; margin-top: 1em; font-size: 0.9em; }
+        .or-divider { text-align: center; margin: 1.5em 0; color: #aaa; }
     </style>
     {% block head %}{% endblock %}
 </head>
 <body>
     <header>
-        <h1>Task App</h1>
-        {% if session.authenticated %}
-            <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
-        {% endif %}
+        <h1>My Notebook</h1>
+        <div class="header-nav">
+            {% if session.user_id %}
+                {% if request.endpoint != 'index' %}
+                    <a href="{{ url_for('index') }}" class="header-button">Home</a>
+                {% endif %}
+                {% if request.endpoint != 'settings' %}
+                    <a href="{{ url_for('settings') }}" class="header-button">Settings</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="header-button">Logout</a>
+            {% else %}
+                {# For logged-out users, show Login and Register buttons unless on that page #}
+                {% if request.endpoint != 'login' %}
+                    {% if request.endpoint != 'register' %}
+                        <a href="{{ url_for('login') }}" class="header-button">Login</a>
+                    {% endif %}
+                {% endif %}
+                {% if request.endpoint != 'register' and request.endpoint != 'login' %}
+                    <a href="{{ url_for('register') }}" class="header-button">Register</a>
+                {% endif %}
+            {% endif %}
+        </div>
     </header>
 
     {% with messages = get_flashed_messages() %}
